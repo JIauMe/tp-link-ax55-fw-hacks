@@ -1,0 +1,32 @@
+name: Build AX53 Firmware
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install required tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y binwalk mtd-utils squashfs-tools u-boot-tools python3 python3-pip
+          pip3 install ubi_reader
+
+      - name: Inspect scripts and run build
+        run: |
+          chmod +x *.sh
+          cat 01-unpack.sh
+          cat 02-repack.sh
+          ./01-unpack.sh "ax53v1-up-all-ver1-1-1-P1[20220609-rel63858]_sign_2022-06-09_17.52.28.bin"
+          ./02-repack.sh
+
+      - name: Upload modified firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: modified-ax53-firmware
+          path: |
+            *.bin
+            !ax53v1-up-all-ver1-1-1-P1[20220609-rel63858]_sign_2022-06-09_17.52.28.bin
