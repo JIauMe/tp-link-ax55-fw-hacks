@@ -20,21 +20,20 @@ jobs:
           make || true
           chmod +x *.sh
 
-      - name: Unpack, enable SSH, and repack
+      - name: Unpack, inspect, enable SSH/Telnet, and repack
         run: |
           sudo ./01-unpack.sh "ax53v1-up-all-ver1-1-1-P1[20220609-rel63858]_sign_2022-06-09_17.52.28.bin"
           
-          # Включаем автозапуск SSH (dropbear) при старте роутера
-          if [ -f squashfs-root/etc/init.d/dropbear ]; then
-            sudo sed -i 's/ENABLE=0/ENABLE=1/g' squashfs-root/etc/init.d/dropbear || true
-            sudo ln -sf ../init.d/dropbear squashfs-root/etc/rc.d/S50dropbear
-          fi
-          
-          # Разрешаем вход по SSH с паролем роутера
-          if [ -f squashfs-root/etc/config/dropbear ]; then
-            sudo sed -i "s/option PasswordAuth.*/option PasswordAuth 'on'/g" squashfs-root/etc/config/dropbear || true
-            sudo sed -i "s/option RootPasswordAuth.*/option RootPasswordAuth 'on'/g" squashfs-root/etc/config/dropbear || true
-          fi
+          echo "=== Службы в init.d ==="
+          ls -la squashfs-root/etc/init.d/
+          echo "=== Поиск dropbear и telnetd ==="
+          find squashfs-root/ -name "*dropbear*" -o -name "*telnet*"
+          echo "=== Содержимое rc.local ==="
+          cat squashfs-root/etc/rc.local || true
+
+          # Прописываем принудительный запуск dropbear и telnetd в rc.local
+          sudo sed -i '/exit 0/i /usr/sbin/dropbear -p 22 &' squashfs-root/etc/rc.local || true
+          sudo sed -i '/exit 0/i /usr/sbin/telnetd -l /bin/login.sh &' squashfs-root/etc/rc.local || true
 
           sudo ./02-repack.sh ax53v1-ssh-mod.bin
           sudo chown $USER:$USER ax53v1-ssh-mod.bin
